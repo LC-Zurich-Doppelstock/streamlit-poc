@@ -4,8 +4,6 @@ ENV TZ=UTC
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 COPY src src
-ARG WEBLING_APIKEY
-ENV WEBLING_APIKEY=$WEBLING_APIKEY
 
 FROM build AS streamlit
 EXPOSE 8501
