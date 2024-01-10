@@ -23,8 +23,8 @@ def run():
     members = [Member(**member) for member in data]
     
     years = range(2016, 2024)
-    m_count = [len([member for member in members if member.is_active(year) and not member.is_talent]) for year in years]
-    t_count = [len([member for member in members if member.is_active(year) and member.is_talent]) for year in years]
+    m_count = [len([member for member in members if member.is_active(year) and not member.talent]) for year in years]
+    t_count = [len([member for member in members if member.is_active(year) and member.talent]) for year in years]
     df = pd.DataFrame({
         'Jahr': years,
         'Talenterhaltung': m_count,
