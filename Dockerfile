@@ -1,4 +1,4 @@
-FROM python:3.10-slim AS build
+FROM python:3.10-slim-buster AS build
 WORKDIR /app
 ENV TZ=UTC
 COPY requirements.txt .
