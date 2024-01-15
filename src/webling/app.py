@@ -4,6 +4,7 @@ import streamlit as st
 from streamlit.logger import get_logger
 from member import Member
 from rest_calls import get_call
+from datetime import date
 
 
 LOGGER = get_logger(__name__)
@@ -22,7 +23,7 @@ def run():
     data = get_call('member', {'format': 'full'}).json()
     members = [Member(**member) for member in data]
     
-    years = range(2016, 2024)
+    years = range(2016, date.today().year + 1)
     m_count = [len([member for member in members if member.is_active(year) and not member.talent]) for year in years]
     t_count = [len([member for member in members if member.is_active(year) and member.talent]) for year in years]
     df = pd.DataFrame({
