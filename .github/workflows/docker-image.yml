@@ -1,8 +1,6 @@
-name: Docker Image CI
+name: Docker PR
 
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
