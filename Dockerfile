@@ -6,5 +6,6 @@ RUN pip install -r requirements.txt
 COPY src src
 
 FROM build AS streamlit
-EXPOSE 8501
-ENTRYPOINT [ "streamlit", "run", "src/webling/app.py", "--server.port=8501", "--server.address=0.0.0.0" ]
+ARG PORT 8501
+EXPOSE $PORT
+ENTRYPOINT [ "streamlit", "run", "src/webling/app.py", "--server.port=$PORT", "--server.address=0.0.0.0" ]
