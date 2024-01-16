@@ -2,7 +2,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 from streamlit.logger import get_logger
-from members import Member, MemberGroup
+from members import Member, Status
 from rest_calls import get_call
 from datetime import date, datetime
 
@@ -37,25 +37,47 @@ def run():
     LOGGER.info('Loading members')
     members = get_members()
 
-    LOGGER.info('Creating chart')
+    LOGGER.info('Creating charts')
     years = range(2016, date.today().year + 1)
+
+    st.subheader("Anzahl Mitglieder im Verlauf der Zeit")
     m_count = [len([member for member in members if member.is_active(year) and not member.talent]) for year in years]
     t_count = [len([member for member in members if member.is_active(year) and member.talent]) for year in years]
-    df = pd.DataFrame({
+    df1 = pd.DataFrame({
         'Jahr': years,
         'Talenterhaltung': m_count,
         'Talentförderung': t_count
-    }).melt('Jahr', var_name='Mitglieder', value_name='Summe')
+    }).melt('Jahr', var_name='Mitglieder', value_name='Anzahl')
 
-    chart = alt.Chart(df).mark_bar().encode(
+    chart = alt.Chart(df1).mark_bar().encode(
         x='Jahr:O',
-        y='Summe:Q',
-        color=alt.Color('Mitglieder', scale=alt.Scale(domain=['Talentförderung', 'Talenterhaltung'], range=['pink', 'lightgreen'])),
-        tooltip=['Mitglieder', 'Summe'],
+        y='Anzahl:Q',
+        color=alt.Color('Mitglieder', scale=alt.Scale(domain=['Talentförderung', 'Talenterhaltung'], range=['blue', 'green'])),
+        tooltip=['Mitglieder', 'Anzahl'],
         order=alt.Order('Mitglieder', sort='ascending')
     ).interactive()
 
     st.altair_chart(chart, use_container_width=True)
+
+    st.subheader("Anzahl Neuzugänge und -abgänge pro Jahr")
+    n_count = [len([member for member in members if member.joined(year)]) for year in years]
+    a_count = [len([member for member in members if member.left(year)]) for year in years]
+    eff_count = [n_count[i] - a_count[i] for i in range(len(years))]
+    df2 = pd.DataFrame({
+        'Jahr': years,
+        'Effektiv': eff_count,
+        'Abgänge': a_count
+    }).melt('Jahr', var_name='Ereignis', value_name='Anzahl')
+
+    chart2 = alt.Chart(df2).mark_bar().encode(
+        x='Jahr:O',
+        y='Anzahl:Q',
+        color=alt.Color('Ereignis', scale=alt.Scale(domain=['Effektiv', 'Abgänge'], range=['lightgreen', 'orange'])),
+        tooltip=['Ereignis', 'Anzahl'],
+        order=alt.Order('Ereignis', sort='descending')
+    ).interactive()
+    
+    st.altair_chart(chart2, use_container_width=True)
 
     if st.button("re-load data"):
         members = get_members()
