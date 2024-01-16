@@ -1,0 +1,15 @@
+{
+    "configurations": [
+        {
+            "name": "Python: Module",
+            "type": "python",
+            "request": "launch",
+            "module": "streamlit",
+            "justMyCode": true,
+            "args": [
+                "run",
+                "src/webling/app.py"
+            ]
+        }
+    ]
+}
