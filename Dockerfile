@@ -6,7 +6,5 @@ RUN pip install -r requirements.txt
 COPY src src
 
 FROM build AS streamlit
-ARG PORT=8501
-EXPOSE $PORT
-ENV PORT=$PORT
+ENV PORT 8501
 CMD streamlit run src/webling/app.py --server.port=$PORT --server.address=0.0.0.0
