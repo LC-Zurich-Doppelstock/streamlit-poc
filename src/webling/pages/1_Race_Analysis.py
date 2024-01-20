@@ -5,7 +5,16 @@ from utils import page_config
 
 page_config()
 
-df_raw = get_sheet('1yKpap4SXwDw6r8-JPViEgNwJw_a-POd13Y47790tGwo', 0)
+# available races
+races = {
+    'La Diagonela 2024': '1yKpap4SXwDw6r8-JPViEgNwJw_a-POd13Y47790tGwo'
+}
+
+# select a race
+race = st.selectbox('Select a race', races.keys())
+if race is None:
+    st.stop()
+df_raw = get_sheet(races[race], 0)
 
 # Reshape the dataframe to long format
 df = df_raw.melt(id_vars='skier', var_name='km', value_name='time')
