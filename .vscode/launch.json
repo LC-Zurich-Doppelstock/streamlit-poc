@@ -8,7 +8,7 @@
             "justMyCode": true,
             "args": [
                 "run",
-                "src/webling/app.py"
+                "src/webling/Home.py"
             ]
         }
     ]
