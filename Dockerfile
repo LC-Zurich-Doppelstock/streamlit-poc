@@ -7,4 +7,4 @@ COPY src src
 
 FROM build AS streamlit
 ENV PORT 8501
-CMD streamlit run src/webling/Home.py --server.port=$PORT --server.address=0.0.0.0
+CMD streamlit run src/webling/Home.py --server.port=$PORT
