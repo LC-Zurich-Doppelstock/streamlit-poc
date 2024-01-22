@@ -39,6 +39,8 @@ df = plot_type.pre_process(filtered_df)
 
 # Reshape the dataframe to long format
 df_melt = df.reset_index().melt(id_vars='skier', var_name='km', value_name='time')
+# and convert the km column to numeric
+df_melt['km'] = pd.to_numeric(df_melt['km'])
 
 # Create a new line plot for the selected skiers
 chart = alt.Chart(df_melt).mark_line().encode(
