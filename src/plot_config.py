@@ -25,12 +25,22 @@ def make_diff_to_fastest(data: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def make_diff_to_fastest_scetion(data: pd.DataFrame) -> pd.DataFrame:
+    df = make_diff_to_fastest(data)
+    df = df.diff(axis=1)
+    return df
+
+
 CONFIGS = [
     PlotConfig(
         name='Race Time',
         y_label='Time [HH:MM:SS]'),
     PlotConfig(
-        name='Time difference to fastest from selection',
+        name='vs. fastest from selection',
         y_label='Time difference [min]',
-        pre_process=make_diff_to_fastest)
+        pre_process=make_diff_to_fastest),
+    PlotConfig(
+        name='vs. fastest from selection, diff per section',
+        y_label='Time difference [min]',
+        pre_process=make_diff_to_fastest_scetion)
 ]
