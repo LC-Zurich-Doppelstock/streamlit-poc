@@ -2,8 +2,8 @@ from enum import Enum
 import pandas as pd
 import streamlit as st
 import altair as alt
-from google_sheets import get_sheet
 from utils import page_config
+from data import get_google_sheet
 
 
 page_config()
@@ -17,14 +17,15 @@ races = {
 race = st.selectbox('Select a race', races.keys())
 if race is None:
     st.stop()
-df_raw = get_sheet('1yKpap4SXwDw6r8-JPViEgNwJw_a-POd13Y47790tGwo', races[race])
+df_raw = get_google_sheet('1yKpap4SXwDw6r8-JPViEgNwJw_a-POd13Y47790tGwo', races[race])
 df_raw = df_raw.set_index('skier')
-df_raw = df_raw.apply(pd.to_datetime)
+df_raw = df_raw.apply(pd.to_datetime, format='%H:%M:%S')
 
 # skiers selection
 selected_skiers = st.multiselect('Select skiers', df_raw.index)
+if selected_skiers is None:
+    st.stop()
 filtered_df = df_raw.loc[selected_skiers]
-
 
 # plot type selection
 class PlotType(str, Enum):
@@ -41,8 +42,10 @@ match plot_type:
         km = [int(i) for i in df_raw.columns]
         # find fastest skier
         fastest_skier = filtered_df[str(max(km))].idxmin()
-        # calculate difference to fastest skier
+        # calculate difference to fastest skier, assuming to have started at the same time
         df = filtered_df.sub(filtered_df.loc[fastest_skier])
+        df = df.apply(pd.to_numeric)/(60*1e9)
+        df = df.sub(df.loc[:,str(min(km))], axis=0)
     case _:
         df = filtered_df
 

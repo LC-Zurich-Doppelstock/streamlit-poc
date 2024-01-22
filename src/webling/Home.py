@@ -3,7 +3,7 @@ import pandas as pd
 import streamlit as st
 from streamlit.logger import get_logger
 from members import Member
-from rest_calls import get_call
+from data import get_call
 from datetime import date, datetime
 from utils import page_config
 
@@ -21,8 +21,6 @@ def get_members() -> list[Member]:
 
 
 def run():
-    LOGGER.info('Starting app')
-
     page_config()
 
     st.title("LC Zürich Doppelstock Mitgliederstatistik")
@@ -81,4 +79,5 @@ def run():
 
 
 if __name__ == '__main__':
+    LOGGER.info('Starting app')
     run()
