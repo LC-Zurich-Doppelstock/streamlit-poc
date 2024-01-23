@@ -7,4 +7,5 @@ COPY src src
 
 FROM build AS streamlit
 ENV PORT 8501
+ENV INTERNA_PASSWORD '1234'
 CMD streamlit run src/Home.py --server.port=$PORT

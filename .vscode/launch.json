@@ -9,7 +9,10 @@
             "args": [
                 "run",
                 "src/Home.py"
-            ]
+            ],
+            "env": {
+                "INTERNA_PASSWORD": "1234"
+            }
         }
     ]
 }

@@ -1,4 +1,5 @@
 import hmac
+import os
 import pandas as pd
 import streamlit as st
 from streamlit.logger import get_logger
@@ -14,11 +15,11 @@ page_config()
 
 def check_password():
     """Returns `True` if the user had the correct password."""
-    pwd_key = 'interna_password'
+    pwd_key = 'INTERNA_PASSWORD'
     ok_key = 'password_ok'
     def password_entered():
         """Checks whether a password entered by the user is correct."""
-        if hmac.compare_digest(st.session_state[pwd_key], st.secrets[pwd_key]):
+        if hmac.compare_digest(st.session_state[pwd_key], os.environ[pwd_key]):
             st.session_state[ok_key] = True
             del st.session_state[pwd_key]  # Don't store the password.
         else:
