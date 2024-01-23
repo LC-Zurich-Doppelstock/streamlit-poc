@@ -1,10 +1,11 @@
 import pandas as pd
 import streamlit as st
-import altair as alt
+import plotly.express as px
 from utils import page_config
 from data import get_google_sheet
 from plot_config import CONFIGS
 from streamlit.logger import get_logger
+
 
 
 LOGGER = get_logger(__name__)
@@ -37,17 +38,19 @@ if plot_type is None:
     st.stop()
 df = plot_type.pre_process(filtered_df)
 
-# Reshape the dataframe to long format
-df_melt = df.reset_index().melt(id_vars='skier', var_name='km', value_name='time')
-# and convert the km column to numeric
-df_melt['km'] = pd.to_numeric(df_melt['km'])
+# Convert the dataframe to long format
+df_long = df.reset_index().melt(id_vars='skier', var_name='km', value_name='time')
+# Convert the km column to numeric
+df_long['km'] = pd.to_numeric(df_long['km'])
 
-# Create a new line plot for the selected skiers
-chart = alt.Chart(df_melt).mark_line().encode(
-    x=alt.X('km', title='Race Distance [km]', sort=[int(i) for i in df.columns]),
-    y=alt.Y('time', title=plot_type.y_label),
-    color='skier'
-).interactive()
+# Create a line plot for the selected skiers using Plotly
+fig = px.line(
+    df_long, x='km', y='time', color='skier',
+    title=plot_type.name,
+    labels={
+        'km': 'Race Distance [km]',
+        'time': plot_type.y_label
+    })
 
 # Display the line plot for the selected skiers
-st.altair_chart(chart, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True)

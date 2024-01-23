@@ -1,6 +1,6 @@
-import altair as alt
-import pandas as pd
 import streamlit as st
+import pandas as pd
+import plotly.express as px
 from streamlit.logger import get_logger
 from members import Member
 from data import get_call
@@ -19,6 +19,20 @@ def get_members() -> list[Member]:
     LOGGER.info('Loaded %d members from Webling' % len(members))
     return members
 
+def cat_bar_plot(title: str, x_label: str, x_values: list, y_label: str, category: str,
+             cat_labels: list[str], cat_values: list[list], cat_colors: list[str]):
+    data = {x_label: x_values}
+    data.update({k: v for k,v in zip(cat_labels, cat_values)})
+    df = pd.DataFrame(data).melt(x_label, var_name=category, value_name=y_label)
+    fig = px.bar(
+        df, x=x_label, y=y_label, color=category,
+        title=title,
+        barmode='group',
+        color_discrete_map={cat: color for cat, color in zip(cat_labels, cat_colors)},
+        category_orders={category: cat_labels})
+    fig.update_layout(xaxis={'type': 'category'}, legend_title=category)
+    st.plotly_chart(fig, use_container_width=True)
+
 
 page_config()
 
@@ -30,46 +44,22 @@ LOGGER.info('Loading members')
 members = get_members()
 
 LOGGER.info('Creating charts')
-years = range(2016, date.today().year + 1)
+years = list(range(2016, date.today().year + 1))
 
-st.subheader("Anzahl Mitglieder im Verlauf der Zeit")
+# Anzahl Mitglieder pro Jahr
 m_count = [len([member for member in members if member.is_active(year) and not member.talent]) for year in years]
 t_count = [len([member for member in members if member.is_active(year) and member.talent]) for year in years]
-df1 = pd.DataFrame({
-    'Jahr': years,
-    'Talenterhaltung': m_count,
-    'Talentförderung': t_count
-}).melt('Jahr', var_name='Mitglieder', value_name='Anzahl')
 
-chart = alt.Chart(df1).mark_bar().encode(
-    x='Jahr:O',
-    y='Anzahl:Q',
-    color=alt.Color('Mitglieder', scale=alt.Scale(domain=['Talentförderung', 'Talenterhaltung'], range=['blue', 'green'])),
-    tooltip=['Mitglieder', 'Anzahl'],
-    order=alt.Order('Mitglieder', sort='ascending')
-).interactive()
+cat_bar_plot('Anzahl Mitglieder im Verlauf der Zeit', 'Jahr', years, 'Anzahl', 'Mitglieder',
+         ['Talenterhaltung', 'Talentförderung'], [m_count, t_count], ['green', 'blue'])
 
-st.altair_chart(chart, use_container_width=True)
-
-st.subheader("Anzahl Neuzugänge und -abgänge pro Jahr")
+# Anzahl Neuzugänge und -abgänge pro Jahr
 n_count = [len([member for member in members if member.joined(year)]) for year in years]
 a_count = [len([member for member in members if member.left(year)]) for year in years]
-eff_count = [n_count[i] - a_count[i] for i in range(len(years))]
-df2 = pd.DataFrame({
-    'Jahr': years,
-    'Effektiv': eff_count,
-    'Abgänge': a_count
-}).melt('Jahr', var_name='Ereignis', value_name='Anzahl')
 
-chart2 = alt.Chart(df2).mark_bar().encode(
-    x='Jahr:O',
-    y='Anzahl:Q',
-    color=alt.Color('Ereignis', scale=alt.Scale(domain=['Effektiv', 'Abgänge'], range=['lightgreen', 'orange'])),
-    tooltip=['Ereignis', 'Anzahl'],
-    order=alt.Order('Ereignis', sort='descending')
-).interactive()
+cat_bar_plot('Anzahl Neuzugänge und -abgänge pro Jahr', 'Jahr', years, 'Anzahl', 'Ereignis',
+         ['Neuzugänge', 'Austritte'], [n_count, a_count], ['lightgreen', 'orange'])
 
-st.altair_chart(chart2, use_container_width=True)
 
 if st.button("re-load data"):
     members = get_members()
