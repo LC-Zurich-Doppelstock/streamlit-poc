@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from streamlit.logger import get_logger
-from members import Member
+from webling.members import Member
 from data import get_call
 from datetime import date, datetime
 from utils import page_config
@@ -18,6 +18,7 @@ def get_members() -> list[Member]:
     members = [Member(**member) for member in data]
     LOGGER.info('Loaded %d members from Webling' % len(members))
     return members
+
 
 def cat_bar_plot(title: str, x_label: str, x_values: list, y_label: str, category: str,
              cat_labels: list[str], cat_values: list[list], cat_colors: list[str]):

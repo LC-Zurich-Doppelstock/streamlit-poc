@@ -20,3 +20,4 @@ jobs:
           docker_heroku_process_type: web
         env:
           HD_WEBLING_APIKEY: ${{ secrets.WEBLING_API_KEY }}
+          HD_INTERNA_PASSWORD: ${{ secrets.INTERNA_PASSWORD }}
