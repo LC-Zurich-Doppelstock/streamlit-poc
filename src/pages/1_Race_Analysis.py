@@ -6,6 +6,7 @@ from data import get_google_sheet
 from plot_config import CONFIGS
 from streamlit.logger import get_logger
 
+DEBUGGING = False
 
 LOGGER = get_logger(__name__)
 
@@ -14,7 +15,7 @@ st.sidebar.title('Configuaration')
 
 # available races
 races = {
-    'La Diagonela 2024': 0
+    'La Diagonela 2024': 0,
 }
 
 # race selection
@@ -25,9 +26,12 @@ df_raw = get_google_sheet('1yKpap4SXwDw6r8-JPViEgNwJw_a-POd13Y47790tGwo', races[
 df_raw = df_raw.set_index('skier')
 df_raw = df_raw.apply(pd.to_datetime, format='%H:%M:%S')
 
+if DEBUGGING: df_raw = df_raw.head(4)
+
 # skiers selection
 selected_skiers = st.sidebar.multiselect('Select skiers', df_raw.index)
 if selected_skiers == []:
+    st.write('Please select skiers')
     st.stop()
 filtered_df = df_raw.loc[selected_skiers]
 
@@ -36,6 +40,8 @@ plot_type = st.sidebar.selectbox('Select a plot type', CONFIGS)
 if plot_type is None:
     st.stop()
 df = plot_type.pre_process(filtered_df)
+
+if DEBUGGING: st.dataframe(df)
 
 # Reshape the dataframe to long format
 df_melt = df.reset_index().melt(id_vars='skier', var_name='km', value_name='time')
@@ -50,4 +56,8 @@ chart = alt.Chart(df_melt).mark_line().encode(
 ).interactive()
 
 # Display the line plot for the selected skiers
+st.title(plot_type.name)
+st.write(plot_type.explanation)
 st.altair_chart(chart, use_container_width=True)
+
+if DEBUGGING: st.dataframe(df_melt)

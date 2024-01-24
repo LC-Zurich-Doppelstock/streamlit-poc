@@ -32,6 +32,8 @@ members = get_members()
 LOGGER.info('Creating charts')
 years = range(2016, date.today().year + 1)
 
+
+# PLOT NUMBER OF ACTIVE MEMBERS
 st.subheader("Anzahl Mitglieder im Verlauf der Zeit")
 m_count = [len([member for member in members if member.is_active(year) and not member.talent]) for year in years]
 t_count = [len([member for member in members if member.is_active(year) and member.talent]) for year in years]
@@ -44,27 +46,30 @@ df1 = pd.DataFrame({
 chart = alt.Chart(df1).mark_bar().encode(
     x='Jahr:O',
     y='Anzahl:Q',
-    color=alt.Color('Mitglieder', scale=alt.Scale(domain=['Talentförderung', 'Talenterhaltung'], range=['blue', 'green'])),
+    color=alt.Color('Mitglieder', scale=alt.Scale(domain=['Talentförderung', 'Talenterhaltung'], range=['grey', 'lightgrey'])),
     tooltip=['Mitglieder', 'Anzahl'],
     order=alt.Order('Mitglieder', sort='ascending')
 ).interactive()
 
 st.altair_chart(chart, use_container_width=True)
 
+
+# PLOT MEMBERSHIP CHANGES PER YEAR 
 st.subheader("Anzahl Neuzugänge und -abgänge pro Jahr")
 n_count = [len([member for member in members if member.joined(year)]) for year in years]
 a_count = [len([member for member in members if member.left(year)]) for year in years]
 eff_count = [n_count[i] - a_count[i] for i in range(len(years))]
 df2 = pd.DataFrame({
     'Jahr': years,
-    'Effektiv': eff_count,
+    'Eintritte': n_count,
     'Abgänge': a_count
 }).melt('Jahr', var_name='Ereignis', value_name='Anzahl')
 
 chart2 = alt.Chart(df2).mark_bar().encode(
     x='Jahr:O',
     y='Anzahl:Q',
-    color=alt.Color('Ereignis', scale=alt.Scale(domain=['Effektiv', 'Abgänge'], range=['lightgreen', 'orange'])),
+    color=alt.Color('Ereignis', scale=alt.Scale(domain=['Eintritte', 'Abgänge'], range=['lightgreen', 'orange'])),
+    xOffset='Ereignis',
     tooltip=['Ereignis', 'Anzahl'],
     order=alt.Order('Ereignis', sort='descending')
 ).interactive()
