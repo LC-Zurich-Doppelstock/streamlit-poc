@@ -77,7 +77,7 @@ RACE_PLOTS = [
         pre_process=make_diff_to_winner),
     RacePlot(
         name='Race Time',
-        explanation='',
+        explanation='The official race time of the selected skiers.',
         y_label='Time [HH:MM:SS]'),
     RacePlot(
         name='sec/km vs. winner from selection, ',
