@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 from plotly.graph_objs import Figure
 from pydantic_settings import BaseSettings
+import datetime as dt
 
 
 class RacePlot(BaseSettings):
@@ -31,15 +32,24 @@ class RacePlot(BaseSettings):
         return fig
 
 
-def make_diff_to_winner(data: pd.DataFrame) -> pd.DataFrame:
+def end_time(data: pd.DataFrame) -> pd.Series:
     km = [int(i) for i in data.columns]
-    # find column with end time
-    end_time = str(max(km))
+    return data[str(max(km))] - data[str(min(km))]
+
+
+def race_hours(data: pd.DataFrame) -> pd.DataFrame:
+    km = [int(i) for i in data.columns]
+    df = data.sub(data[str(min(km))], axis=0)
+    return df.apply(pd.to_numeric)/(60*60*1e9)
+
+
+def make_diff_to_winner(data: pd.DataFrame) -> pd.DataFrame:
     # find fastest skier
-    fastest_skier = data[end_time].idxmin()
-    # calculate difference to fastest skier, assuming to have started at the same time
+    fastest_skier = end_time(data).idxmin()
+    # calculate difference to fastest skier
     df = data.sub(data.loc[fastest_skier])*(-1)
     df = df.apply(pd.to_numeric)/(60*1e9)
+    km = [int(i) for i in data.columns]
     df = df.sub(df.loc[:,str(min(km))], axis=0)
     return df
 
@@ -64,6 +74,18 @@ def make_diff_to_leader(data: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def add_seedings(data: pd.DataFrame, seedings: dict[str, dict[str, dt.timedelta]]) -> pd.DataFrame:
+    t = end_time(data)
+    r = race_hours(data)
+    for race, seeding in seedings.items():
+        for k, v in seeding.items():
+            i = t[t < v].index
+            t = t.drop(i)
+            m = r.loc[i].mean().apply(pd.to_timedelta, unit='h')
+            data.loc[f'{race}, {k}'] = data.min().min() + m
+    return data
+
+
 RACE_PLOTS = [
     RacePlot(
         name='vs. leader of selection',
@@ -78,7 +100,8 @@ RACE_PLOTS = [
     RacePlot(
         name='Race Time',
         explanation='The official race time of the selected skiers.',
-        y_label='Time [HH:MM:SS]'),
+        y_label='Time [hours]',
+        pre_process=race_hours),
     RacePlot(
         name='sec/km vs. winner from selection, ',
         explanation='Speed difference between checkpoints against eventual winner, considering only the selected skiers.',

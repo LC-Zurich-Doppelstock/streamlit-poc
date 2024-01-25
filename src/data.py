@@ -21,6 +21,6 @@ def get_call(route: str, params: dict[str, Any] = {}) -> Response:
     return get(f'{cfg.apiUrl}/{route}', params=params)
 
 
-def get_google_sheet(spreadsheet_id: str, sheet_id: int, format: str = 'csv') -> pd.DataFrame:
+def get_google_sheet(spreadsheet_id: str, sheet_id: str, format: str = 'csv') -> pd.DataFrame:
     url = f'https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format={format}&gid={sheet_id}'
     return pd.read_csv(url)
