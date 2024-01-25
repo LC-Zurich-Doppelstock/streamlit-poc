@@ -47,19 +47,20 @@ members = get_members()
 LOGGER.info('Creating charts')
 years = list(range(2016, date.today().year + 1))
 
-# Anzahl Mitglieder pro Jahr
+
+# PLOT NUMBER OF ACTIVE MEMBERS
 m_count = [len([member for member in members if member.is_active(year) and not member.talent]) for year in years]
 t_count = [len([member for member in members if member.is_active(year) and member.talent]) for year in years]
 
 cat_bar_plot('Anzahl Mitglieder im Verlauf der Zeit', 'Jahr', years, 'Anzahl', 'Mitglieder',
-         ['Talenterhaltung', 'Talentförderung'], [m_count, t_count], ['green', 'blue'])
+         ['Talenterhaltung', 'Talentförderung'], [m_count, t_count], ['lightgrey', 'grey'])
 
-# Anzahl Neuzugänge und -abgänge pro Jahr
+# PLOT MEMBERSHIP CHANGES PER YEAR 
 n_count = [len([member for member in members if member.joined(year)]) for year in years]
 a_count = [len([member for member in members if member.left(year)]) for year in years]
 
 cat_bar_plot('Anzahl Neuzugänge und -abgänge pro Jahr', 'Jahr', years, 'Anzahl', 'Ereignis',
-         ['Neuzugänge', 'Austritte'], [n_count, a_count], ['lightgreen', 'orange'])
+         ['Eintritte', 'Austritte'], [n_count, a_count], ['lightgreen', 'orange'])
 
 
 if st.button("re-load data"):
