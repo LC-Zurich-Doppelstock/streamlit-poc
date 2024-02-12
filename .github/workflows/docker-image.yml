@@ -13,4 +13,4 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag lc-zh-doppelstock:$(date +%s)
+      run: docker build . --file Dockerfile --tag streamlit-poc:$(date +%s)

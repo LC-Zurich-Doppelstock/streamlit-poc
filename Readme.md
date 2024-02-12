@@ -1,4 +1,4 @@
-# LC Zürich Doppelstock Data Analytics
+# Proof-of-concept for Data Analytics Webapp
 
 requirements: docker installed and running
 
