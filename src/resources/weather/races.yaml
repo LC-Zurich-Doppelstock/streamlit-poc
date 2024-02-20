@@ -1,0 +1,19 @@
+- name: 'Vasaloppet 24'
+  start: '2024-03-03T08:00:00'
+  distance: 90
+  checkpoints:
+  - name: Sälen
+    distance: 0
+    coordinates: [61.150, 13.267, 367]
+  - name: Mångsbodarna
+    distance: 24
+    coordinates: [61.083, 13.617, 404]
+  - name: Evertsberg
+    distance: 48
+    coordinates: [61.133, 13.950, 442]
+  - name: Hökberg
+    distance: 71
+    coordinates: [61.067, 14.317, 250]
+  - name: Mora
+    distance: 90
+    coordinates: [61.007, 14.543, 162]
