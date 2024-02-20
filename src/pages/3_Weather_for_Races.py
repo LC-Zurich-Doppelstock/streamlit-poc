@@ -48,7 +48,8 @@ cols = ['datetime', 'name', 'temp', 'feelslike', 'humidity','precip','precipprob
 # icons: https://github.com/visualcrossing/WeatherIcons/tree/main/PNG/2nd%20Set%20-%20Color
 rows = []
 for checkpoint in race.checkpoints:
-    filename = f'{RESOURCES_PATH}/{race.name}_{checkpoint.distance:.0f}.csv'
+    race_id = race.name.replace(' ', '_')
+    filename = f'{RESOURCES_PATH}/{race_id}_{checkpoint.distance:.0f}.csv'
     if False:
         location = urllib.parse.quote_plus(f'{checkpoint.coordinates[0]},{checkpoint.coordinates[1]}')
         url = f'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/{location}?unitGroup=metric&include=hours&key={apiKey}&contentType=csv'
