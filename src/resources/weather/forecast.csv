@@ -1,0 +1,6 @@
+name,km,time,temp,feelslike,dew,humidity,precip,precipprob,preciptype,snow,snowdepth,windgust,windspeed,winddir,cloudcover,conditions,icon
+Sälen,0.0,08:00:00,-5.2,-8.6,-5.9,94.82,0.0,16.1,,0.0,32.6,13.9,7.3,345.6,96.9,Overcast,fog
+Mångsbodarna,24.0,09:20:00,-2.9,-5.9,-3.5,95.87,0.0,16.1,,0.0,19.53,12.8,7.3,7.5,99.6,Overcast,fog
+Evertsberg,48.0,10:40:00,-1.1,-1.1,-1.6,96.16,0.0,22.6,,0.0,19.6,6.7,4.1,28.5,99.6,Overcast,fog
+Hökberg,71.0,11:56:40,-0.1,-2.2,-0.3,98.32,0.0,22.6,,0.0,10.67,10.2,6.1,41.4,100.0,Overcast,fog
+Mora,90.0,13:00:00,0.6,-1.6,0.6,100.0,0.5,22.6,snow,0.0,8.8,11.9,6.5,35.9,100.0,Overcast,fog

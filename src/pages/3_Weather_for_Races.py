@@ -1,23 +1,34 @@
+import os
+import altair as alt
 import datetime as dt
 import pandas as pd
 from pydantic import BaseModel
 import streamlit as st
 from streamlit.logger import get_logger
-import urllib.parse
 import yaml
+from data import load_forecast
 from utils import page_config
 
 
 LOGGER = get_logger(__name__)
 LOGGER.setLevel('DEBUG')
 RESOURCES_PATH = 'src/resources/weather'
+DEBUG = False
 
-cfg = page_config()
+page_config()
 
 class Checkpoint(BaseModel):
     name: str
     distance: float
     coordinates: tuple[float, float, float]
+
+    def __hash__(self):
+        return hash((self.coordinates[0], self.coordinates[1]))
+
+    def __eq__(self, other):
+        if other.__class__ is self.__class__:
+            return self.__hash__() == other.__hash__()
+        return NotImplemented
 
 class Race(BaseModel):
     name: str
@@ -43,27 +54,43 @@ time = st.time_input('Select your expected race time', dt.time(6, 0))
 
 st.write(f'{race}: {race.start}')
 
-apiKey = 'BGD8LBFE9CN7D75ZUJ2UGKSTV'
-cols = ['datetime', 'name', 'temp', 'feelslike', 'humidity','precip','precipprob','preciptype','snow','snowdepth','windgust','windspeed','winddir','cloudcover','conditions', 'icon']
 # icons: https://github.com/visualcrossing/WeatherIcons/tree/main/PNG/2nd%20Set%20-%20Color
-rows = []
-for checkpoint in race.checkpoints:
-    race_id = race.name.replace(' ', '_')
-    filename = f'{RESOURCES_PATH}/{race_id}_{checkpoint.distance:.0f}.csv'
-    if False:
-        location = urllib.parse.quote_plus(f'{checkpoint.coordinates[0]},{checkpoint.coordinates[1]}')
-        url = f'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/{location}?unitGroup=metric&include=hours&key={apiKey}&contentType=csv'
-        data = pd.read_csv(url, delimiter=',', index_col='datetime', parse_dates=True)
-        data.to_csv(filename)
-    else:
-        data = pd.read_csv(filename, delimiter=',', index_col='datetime', parse_dates=True, usecols=cols, )
+cols = ['temp','feelslike','dew','humidity','precip','precipprob','preciptype','snow','snowdepth','windgust','windspeed','winddir','cloudcover','conditions','icon']
+cols_std = ['km', 'time']
+cache_file = f'{RESOURCES_PATH}/forecast.csv'
+if DEBUG and os.path.exists(cache_file):
+    forecast = pd.read_csv(cache_file, delimiter=',', index_col=0, parse_dates=True)
+else:
+    rows = []
+    for checkpoint in race.checkpoints:
+        cache_id = dt.datetime.now().hour
+        data = load_forecast(f'{checkpoint.coordinates[0]},{checkpoint.coordinates[1]}', cache_id)[cols]
+        t = race.start + dt.timedelta(hours=checkpoint.distance/race.distance*time.hour)
+        i = min(data.index, key=lambda d: abs(d - t))
+        row = data.loc[i]
+        row['name'] = checkpoint.name
+        row['km'] = checkpoint.distance
+        row['time'] = t.time()
+        rows.append(row)
+    forecast = pd.concat(rows, axis=1).transpose()
+    forecast.reset_index(inplace=True, drop=True)
+    forecast.set_index('name', inplace=True)
+    forecast = forecast[cols_std + cols]
+    forecast.to_csv(cache_file)
     
-    t = race.start + dt.timedelta(hours=checkpoint.distance/race.distance*time.hour)
-    i = min(data.index, key=lambda d: abs(d - t))
-    row = data.loc[i]
-    row['name'] = checkpoint.name
-    row['km'] = checkpoint.distance
-    rows.append(row)
 
-forecast = pd.concat(rows, axis=1).transpose()
-st.dataframe(forecast)
+st.write('---')
+
+cols_selected = st.multiselect(
+    'Select Columns',
+    cols, default=['temp', 'feelslike', 'precip', 'windspeed', 'winddir', 'conditions'])
+st.dataframe(forecast[cols_std + cols_selected])
+
+with st.expander('temperatures (WIP)'):
+    data = forecast.reset_index()[['km', 'temp', 'feelslike', 'dew']].melt('km')
+    chart = alt.Chart(data).mark_line().encode(
+        x=alt.X('km', axis=alt.Axis(title='Distance [km]')),
+        y=alt.Y('value', axis=alt.Axis(title='Temperature [°C]')),
+        color='variable'
+    )
+    st.altair_chart(chart, use_container_width=True)
