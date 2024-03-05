@@ -17,3 +17,10 @@
       '7': '05:12:00'
       '8': '05:42:00'
       '9': '07:40:00'
+- name: 'Vasaloppet 2024'
+  date: '2024-03-03'
+  distance: 90
+  location: Sälen/Mora
+  url: https://www.vasaloppet.se/
+  doc_id: '1yKpap4SXwDw6r8-JPViEgNwJw_a-POd13Y47790tGwo'
+  sheet_id: '25343467'
