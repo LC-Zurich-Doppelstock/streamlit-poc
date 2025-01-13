@@ -12,6 +12,7 @@ class Status(str, Enum):
     Aspirant = 'Aspirant'
     Aktiv = 'Aktiv'
     Ausgetreten = 'Ausgetreten'
+    Pastis = 'Pastis'
 
 
 class Member(BaseModel):
