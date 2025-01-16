@@ -17,3 +17,26 @@
   - name: Mora
     distance: 90
     coordinates: [61.007, 14.543, 162]
+- name: 'La Diagonela 25'
+  start: '2025-01-18T10:00:00'
+  distance: 43
+  checkpoints:
+  - name: 'Pontresina Start'
+    distance: 0
+    coordinates: [46.490, 9.904, 1810]
+  - name: Celerina
+    distance: 7
+    coordinates: [46.513, 9.859, 1727]
+  - name: 'Pontresina 2'
+    distance: 13
+    coordinates: [46.490, 9.904, 1810]
+  - name: 'La Punt'
+    distance: 26
+    coordinates: [46.579, 9.925392, 1685]
+  - name: S-Chanf
+    distance: 38
+    coordinates: [46.613, 9.986, 1661]
+  - name: Zuoz
+    distance: 43
+    coordinates: [46.601, 9.961, 1703]
+  
