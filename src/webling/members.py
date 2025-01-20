@@ -20,6 +20,9 @@ class Member(BaseModel):
     status: Status = Field(validation_alias=AliasPath('properties', 'Status'))
     start: date = Field(validation_alias=AliasPath('properties', 'Eintrittsdatum'))
     end: date | None = Field(default=None, validation_alias=AliasPath('properties', 'Austrittsdatum'))
+    email: str | None = Field(default=None, validation_alias=AliasPath('properties', 'E-Mail'))
+    first_name: str = Field(validation_alias=AliasPath('properties', 'Vorname'))
+    last_name: str = Field(validation_alias=AliasPath('properties', 'Name'))
 
     def is_active(self, year: int) -> bool:
         if self.status == Status.Aspirant:
