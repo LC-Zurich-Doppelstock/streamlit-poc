@@ -22,7 +22,3 @@ jobs:
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
           usedocker: true
           docker_heroku_process_type: web
-        env:
-          HD_WEBLING_APIKEY: ${{ secrets.WEBLING_API_KEY }}
-          HD_INTERNA_PASSWORD: ${{ secrets.INTERNA_PASSWORD }}
-          HD_VISUALCROSSING_APIKEY: ${{ secrets.VISUALCROSSING_API_KEY }}
