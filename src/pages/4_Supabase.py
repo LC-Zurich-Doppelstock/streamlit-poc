@@ -52,11 +52,15 @@ def login(email: str, password: str):
 
 def signup(email: str, password: str):
     validate_active_member(email)
+    app_url = os.getenv("APP_URL")
+    if not app_url:
+        st.error("APP_URL not set")
+        st.stop()
     body = {
         "email": email,
         "password": password,
         "options": {
-            "email_redirect_to": os.getenv("HOST", "http://localhost:8501") + "/supabase"
+            "email_redirect_to": app_url + "/Supabase"
         }
     }
     response = supabase.auth.sign_up(body)
