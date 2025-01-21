@@ -1,8 +1,9 @@
-import streamlit as st
-from supabase import create_client, Client, AuthInvalidCredentialsError
 import os
-from webling.members import Member, Status
+import streamlit as st
 from data import get_call
+from supabase import AuthApiError, AuthWeakPasswordError, Client, create_client
+from typing import Callable
+from webling.members import Member, Status
 
 # Initialize connection.
 # Uses st.cache_resource to only run once.
@@ -17,6 +18,10 @@ def get_supabase_client() -> Client:
 
 supabase = get_supabase_client()
 
+@st.cache_data(ttl=10)
+def get_data(_supabase: Client, table: str) -> list[dict]:
+    return _supabase.table(table).select("*").execute().data
+
 LOGIN_STATE = "logged_in"
 
 def set_login_state(state: bool):
@@ -25,68 +30,77 @@ def set_login_state(state: bool):
 
 def is_logged_in() -> bool:
     return st.session_state.get(LOGIN_STATE, False)
+    
 
-def get_active_member(email: str) -> Member | None:
+def validate_active_member(email: str) -> Member:
     data = get_call('member', {'format': 'full'}).json()
     members = [Member(**member) for member in data]
-    return next((member for member in members if member.email == email and member.status == Status.Aktiv), None)
+    member = next((member for member in members if member.email == email and member.status == Status.Aktiv), None)
+    if not member:
+        st.error(f"No active member found in Webling with email {email}.")
+        st.stop()
+    return member
 
-def login():
-    if not is_logged_in():
-        col1, col2 = st.columns(2)
-        with col1:
-            st.subheader("Log In")
-            with st.form("login_form"):
-                email = st.text_input("Email")
-                password = st.text_input("Password", type="password")
-                submit = st.form_submit_button("Log In")
-                if submit:
-                    try:
-                        supabase.auth.sign_in_with_password({
-                            "email": email,
-                            "password": password
-                        })
-                        set_login_state(True)
-                        st.rerun()
-                    except Exception:
-                        st.error("Invalid email or password")
-                        st.stop()
+def login(email: str, password: str):
+    validate_active_member(email)
+    response = supabase.auth.sign_in_with_password({
+        "email": email,
+        "password": password
+    })
+    st.success("Logged in successfully.")
+    set_login_state(True)
 
-        with col2:
-            st.subheader("Register")
-            with st.form("signup_form"):
-                email = st.text_input("Email (your e-mail address listed in Webling)")
-                password = st.text_input("Password", type="password")
-                submit = st.form_submit_button("Register")
-                if submit:
-                    if not get_active_member(email):
-                        st.error(f"No active member found in Webling with email {email}.")
-                        st.stop()
-                    body = {
-                        "email": email,
-                        "password": password,
-                        "options": {
-                            "email_redirect_to": os.getenv("HOST", "http://localhost:8501") + "/supabase"
-                        }
-                    }
-                    try:
-                        supabase.auth.sign_up(body)
-                    except Exception as e:
-                        st.error(f"Something went wrong while registering: {e}")
-                        st.stop()
-                    
+def signup(email: str, password: str):
+    validate_active_member(email)
+    body = {
+        "email": email,
+        "password": password,
+        "options": {
+            "email_redirect_to": os.getenv("HOST", "http://localhost:8501") + "/supabase"
+        }
+    }
+    response = supabase.auth.sign_up(body)
+    if len(response.user.identities) > 0:
+        st.success("User created successfully. Please check your email for a verification link.")
+    else:
+        st.warning("User already exists. Please log in.")
 
+def handle_action(clicked: bool, func: Callable[[], None]):
+    if clicked:
+        try:
+            func()
+        except (AuthWeakPasswordError, AuthApiError) as e:
+            st.error(e)
+            st.stop()
+
+def init():
+    tab1, tab2 = st.tabs(["Log In", "Register"])
+    with tab1:
+        with st.form("login_form"):
+            email = st.text_input("Email", help="Your e-mail address listed in Webling")
+            password = st.text_input("Password", type="password")
+            submit = st.form_submit_button("Log In", type="primary")
+            handle_action(submit, lambda: login(email, password))
+    with tab2:
+        with st.form("signup_form"):
+            email = st.text_input("Email", help="Your e-mail address listed in Webling")
+            password = st.text_input("Password", type="password")
+            submit = st.form_submit_button("Register", type="primary")
+            handle_action(submit, lambda: signup(email, password))
+
+# Main
 if not is_logged_in():
     st.write("You are not logged in. Please log in or sign up.")
-    login()
+    init()
 else:
     user = supabase.auth.get_user()
     if not user:
-        st.error("User not found")
+        st.error("No User logged in.")
         st.stop()
-    member = get_active_member(user.user.email)
+    member = validate_active_member(user.user.email)
     if not member:
+        st.error("No active member found in Webling with email {user.user.email}.")
         st.stop()
     st.markdown(f"Welcome *:blue[{member.first_name} {member.last_name}]*")
 
-    st.table(supabase.table("test").select("*").execute().data)
+    st.table(get_data(supabase, "test"))

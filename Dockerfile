@@ -6,5 +6,5 @@ RUN pip install -r requirements.txt
 COPY src src
 
 FROM build AS streamlit
-ENV PORT 8501
-CMD streamlit run src/Home.py --server.port=$PORT
+ENV PORT=8501
+CMD ["sh", "-c", "streamlit run src/Home.py --server.port=$PORT"]
