@@ -18,11 +18,10 @@ def get_supabase_client() -> Client:
 
 supabase = get_supabase_client()
 
-@st.cache_data(ttl=10)
+LOGIN_STATE = "logged_in"
+
 def get_data(_supabase: Client, table: str) -> list[dict]:
     return _supabase.table(table).select("*").execute().data
-
-LOGIN_STATE = "logged_in"
 
 def set_login_state(state: bool):
     st.session_state[LOGIN_STATE] = state
@@ -108,3 +107,11 @@ else:
     st.markdown(f"Welcome *:blue[{member.first_name} {member.last_name}]*")
 
     st.table(get_data(supabase, "test"))
+    
+    with st.form("test_form"):
+        name = st.text_input("Name")
+        submit = st.form_submit_button("Add")
+        if submit:
+            supabase.table("test").insert({"name": name}).execute()
+            st.success("Added new entry.")
+            st.rerun()
