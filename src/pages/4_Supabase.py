@@ -1,56 +1,32 @@
 import os
 import streamlit as st
-from data import get_call
-from supabase import AuthApiError, AuthWeakPasswordError, Client, create_client
+from data import get_active_member, get_supabase_client
+from supabase import AuthApiError, AuthWeakPasswordError
 from typing import Callable
-from webling.members import Member, Status
 
-# Initialize connection.
-# Uses st.cache_resource to only run once.
-@st.cache_resource
-def get_supabase_client() -> Client:
-    url = os.getenv('SUPABASE_URL')
-    key = os.getenv('SUPABASE_KEY')
-    if not url or not key:
-        st.error('SUPABASE_URL or SUPABASE_KEY not set')
-        st.stop()
-    return create_client(url, key)
 
 supabase = get_supabase_client()
 
 LOGIN_STATE = "logged_in"
 
-def get_data(_supabase: Client, table: str) -> list[dict]:
-    return _supabase.table(table).select("*").execute().data
-
 def set_login_state(state: bool):
     st.session_state[LOGIN_STATE] = state
-    st.rerun()
 
 def is_logged_in() -> bool:
-    return st.session_state.get(LOGIN_STATE, False)
-    
-
-def validate_active_member(email: str) -> Member:
-    data = get_call('member', {'format': 'full'}).json()
-    members = [Member(**member) for member in data]
-    member = next((member for member in members if member.email == email and member.status == Status.Aktiv), None)
-    if not member:
-        st.error(f"No active member found in Webling with email {email}.")
-        st.stop()
-    return member
+    return st.session_state.get(LOGIN_STATE, False)    
 
 def login(email: str, password: str):
-    validate_active_member(email)
+    member = get_active_member(email)
     response = supabase.auth.sign_in_with_password({
         "email": email,
         "password": password
     })
     st.success("Logged in successfully.")
     set_login_state(True)
+    st.rerun()
 
 def signup(email: str, password: str):
-    validate_active_member(email)
+    member = get_active_member(email)
     app_url = os.getenv("APP_URL")
     if not app_url:
         st.error("APP_URL not set")
@@ -92,6 +68,8 @@ def init():
             handle_action(submit, lambda: signup(email, password))
 
 # Main
+set_login_state(supabase.auth.get_user() is not None)
+
 if not is_logged_in():
     st.write("You are not logged in. Please log in or sign up.")
     init()
@@ -100,18 +78,20 @@ else:
     if not user:
         st.error("No User logged in.")
         st.stop()
-    member = validate_active_member(user.user.email)
+    member = get_active_member(user.user.email)
     if not member:
         st.error("No active member found in Webling with email {user.user.email}.")
         st.stop()
     st.markdown(f"Welcome *:blue[{member.first_name} {member.last_name}]*")
 
-    st.table(get_data(supabase, "test"))
+    data = supabase.table("test").select("*").execute().data
+    st.dataframe(data, use_container_width=True, hide_index=True)
     
-    with st.form("test_form"):
-        name = st.text_input("Name")
-        submit = st.form_submit_button("Add")
-        if submit:
-            supabase.table("test").insert({"name": name}).execute()
-            st.success("Added new entry.")
-            st.rerun()
+    with st.popover("Add new entry"):
+        with st.form("test_form"):
+            name = st.text_input("Name")
+            submit = st.form_submit_button("Add")
+            if submit:
+                supabase.table("test").insert({"name": name}).execute()
+                st.success("Added new entry.")
+                st.rerun()
