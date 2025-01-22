@@ -2,7 +2,10 @@ import os
 import streamlit as st
 from data import get_active_member, get_supabase_client
 from supabase import AuthApiError, AuthWeakPasswordError
+from models.kick_wax import KickWaxEntry
 from typing import Callable
+from pydantic import ValidationError
+import streamlit_react_jsonschema as srj
 
 
 supabase = get_supabase_client()
@@ -53,45 +56,51 @@ def handle_action(clicked: bool, func: Callable[[], None]):
             st.stop()
 
 def init():
-    tab1, tab2 = st.tabs(["Log In", "Register"])
-    with tab1:
-        with st.form("login_form"):
-            email = st.text_input("Email", help="Your e-mail address listed in Webling")
-            password = st.text_input("Password", type="password")
-            submit = st.form_submit_button("Log In", type="primary")
-            handle_action(submit, lambda: login(email, password))
-    with tab2:
-        with st.form("signup_form"):
-            email = st.text_input("Email", help="Your e-mail address listed in Webling")
-            password = st.text_input("Password", type="password")
-            submit = st.form_submit_button("Register", type="primary")
-            handle_action(submit, lambda: signup(email, password))
+    # initial login state
+    set_login_state(supabase.auth.get_user() is not None)
+    # if not logged in, show login form
+    if not is_logged_in():
+        with st.sidebar.expander("You are not logged in. Please log in or register."):
+            with st.form("login_form"):
+                email = st.text_input("Email", help="Your e-mail address listed in Webling")
+                password = st.text_input("Password", type="password")
+                col1, col2 = st.columns(2)
+                with col1:
+                    login_button = st.form_submit_button("Log In", type="primary")
+                with col2:
+                    signup_button = st.form_submit_button("Register", type="secondary", help="Register a new user")
+                # TODO: Add a button to reset password
+                handle_action(login_button, lambda: login(email, password))
+                handle_action(signup_button, lambda: signup(email, password))
+    # otherwise show the user info
+    else:
+        with st.sidebar.expander("You are logged in."):
+            user = supabase.auth.get_user()
+            if not user:
+                st.error("No User logged in.")
+                st.stop()
+            member = get_active_member(user.user.email)
+            if not member:
+                st.error("No active member found in Webling with email {user.user.email}.")
+                st.stop()
+            st.markdown(f"Welcome *:blue[{member.first_name} {member.last_name}]*")
 
 # Main
-set_login_state(supabase.auth.get_user() is not None)
-
+init()
 if not is_logged_in():
-    st.write("You are not logged in. Please log in or sign up.")
-    init()
-else:
-    user = supabase.auth.get_user()
-    if not user:
-        st.error("No User logged in.")
-        st.stop()
-    member = get_active_member(user.user.email)
-    if not member:
-        st.error("No active member found in Webling with email {user.user.email}.")
-        st.stop()
-    st.markdown(f"Welcome *:blue[{member.first_name} {member.last_name}]*")
+    st.stop()
 
-    data = supabase.table("test").select("*").execute().data
-    st.dataframe(data, use_container_width=True, hide_index=True)
-    
-    with st.popover("Add new entry"):
-        with st.form("test_form"):
-            name = st.text_input("Name")
-            submit = st.form_submit_button("Add")
-            if submit:
-                supabase.table("test").insert({"name": name}).execute()
-                st.success("Added new entry.")
-                st.rerun()
+# load data
+data = supabase.table("test").select("*").execute().data
+st.dataframe(data, use_container_width=True, hide_index=True)
+
+# add new entry
+with st.expander("Add new entry"):
+    value, submitted = srj.pydantic_form(model=KickWaxEntry)    
+    if submitted and value:
+        try:
+            obj = KickWaxEntry.model_validate(value)
+            supabase.table("test").insert({"name": obj.name}).execute()
+            st.success("Added new entry.")
+        except ValidationError as e:
+            st.error(e)
