@@ -24,14 +24,20 @@ class SingleLayer(BaseModel):
         return f"{self.brand.value} {self.name} - {self.application.value}"
 
 
-class KickWaxEntry(BaseModel):
+class KickWaxAdd(BaseModel):
     name: str = Field(..., description="Name of the event")
     location: str = Field(..., description="Location of the event")
     date: dt.date = Field(default=dt.date.today(), description="Date of the event")
     success_rate: int = Field(default=3, ge=1, le=5, description="Success rating")
     layers: List[SingleLayer] = Field(..., description="Wax layers applied")
 
+    def __str__(self):
+        return f"{self.name} on {self.date}"
+
     def model_dump(self, **kwargs):
         data = super().model_dump(**kwargs)
         data['date'] = self.date.isoformat()
         return data
+
+class KickWaxEntry(KickWaxAdd):
+    id: int = Field(default=0, description="Unique identifier for the entry")
