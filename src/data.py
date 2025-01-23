@@ -6,8 +6,9 @@ from requests import get, Response
 from typing import Any
 from urllib import parse
 from webling.members import Member, Status
-from supabase import create_client, Client
-from gotrue.types import User
+from supabase import create_client, Client, AuthApiError, AuthWeakPasswordError
+from gotrue.types import User, SignUpWithEmailAndPasswordCredentials
+from typing import Callable
 
 
 class WeblingConfig(BaseSettings):
@@ -99,30 +100,41 @@ class LoginHandler:
         return self.authorized_user is not None
     
     def login(self, email: str, password: str):
-        member = get_active_member(email)
-        response = self.supabase_client.auth.sign_in_with_password({
-            "email": email,
-            "password": password
-        })
-        st.success("Logged in successfully.")
-        self.set_authorized_user()
-        st.rerun()
+        def login_func():
+            member = get_active_member(email)
+            response = self.supabase_client.auth.sign_in_with_password({
+                "email": email,
+                "password": password
+            })
+            st.success("Logged in successfully.")
+            self.set_authorized_user()
+            st.rerun()
+        self._handle_action(login_func)
     
     def signup(self, email: str, password: str):
-        member = get_active_member(email)
-        app_url = os.getenv("APP_URL")
-        if not app_url:
-            st.error("APP_URL not set")
+        def signup_func():
+            member = get_active_member(email)
+            app_url = os.getenv("APP_URL")
+            if not app_url:
+                st.error("APP_URL not set")
+                st.stop()
+            body = SignUpWithEmailAndPasswordCredentials(
+                email=email,
+                password=password,
+                options={
+                    "email_redirect_to": app_url + "/Supabase"
+                }
+            )
+            response = self.supabase_client.auth.sign_up(body)
+            if response.user and response.user.identities and len(response.user.identities) > 0:
+                st.success("User created successfully. Please check your email for a verification link.")
+            else:
+                st.warning("User already exists. Please log in.")
+        self._handle_action(signup_func)
+    
+    def _handle_action(self, func: Callable[[], None]):
+        try:
+            func()
+        except (AuthWeakPasswordError, AuthApiError) as e:
+            st.error(e)
             st.stop()
-        body = {
-            "email": email,
-            "password": password,
-            "options": {
-                "email_redirect_to": app_url + "/Supabase"
-            }
-        }
-        response = self.supabase_client.auth.sign_up(body)
-        if len(response.user.identities) > 0:
-            st.success("User created successfully. Please check your email for a verification link.")
-        else:
-            st.warning("User already exists. Please log in.")

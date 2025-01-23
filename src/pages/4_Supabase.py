@@ -1,8 +1,6 @@
 import streamlit as st
 from data import get_active_member, LoginHandler
-from supabase import AuthApiError, AuthWeakPasswordError
 from models.kick_wax import KickWaxEntry, KickWaxAdd
-from typing import Callable
 from pydantic import ValidationError
 import streamlit_react_jsonschema as srj
 
@@ -10,15 +8,6 @@ import streamlit_react_jsonschema as srj
 if "login_handler" not in st.session_state:
     st.session_state["login_handler"] = LoginHandler()
 login_handler = st.session_state["login_handler"]
-
-
-def handle_action(clicked: bool, func: Callable[[], None]):
-    if clicked:
-        try:
-            func()
-        except (AuthWeakPasswordError, AuthApiError) as e:
-            st.error(e)
-            st.stop()
 
 def init():
     # initial login state
@@ -31,12 +20,12 @@ def init():
                 password = st.text_input("Password", type="password")
                 col1, col2 = st.columns(2)
                 with col1:
-                    login_button = st.form_submit_button("Log In", type="primary")
+                    if st.form_submit_button("Log In", type="primary"):
+                        login_handler.login(email, password)
                 with col2:
-                    signup_button = st.form_submit_button("Register", type="secondary", help="Register a new user")
+                    if st.form_submit_button("Register", type="secondary", help="Register a new user"):
+                        login_handler.signup(email, password)
                 # TODO: Add a button to reset password
-                handle_action(login_button, lambda: login_handler.login(email, password))
-                handle_action(signup_button, lambda: login_handler.signup(email, password))
                 st.stop()
     # otherwise show the user info
     else:
@@ -68,7 +57,14 @@ summary = [
     } for entry in data
 ]
 display_columns.append('mine')
-table = st.dataframe(summary, use_container_width=True, hide_index=True, column_order=display_columns, on_select="rerun", selection_mode="single-row")
+# display table
+table = st.dataframe(
+    summary,
+    use_container_width=True,
+    hide_index=True,
+    column_order=display_columns,
+    on_select="rerun",
+    selection_mode="single-row")
 
 # view/edit/delete
 if not table.selection.rows:
