@@ -1,6 +1,5 @@
-import os
 import streamlit as st
-from data import get_active_member, get_supabase_client
+from data import get_active_member, LoginHandler
 from supabase import AuthApiError, AuthWeakPasswordError
 from models.kick_wax import KickWaxEntry, KickWaxAdd
 from typing import Callable
@@ -8,52 +7,10 @@ from pydantic import ValidationError
 import streamlit_react_jsonschema as srj
 
 
-SUPABASE_CLIENT = "supabase"
-AUTHORIZED_USER = "authorized_user"
+if "login_handler" not in st.session_state:
+    st.session_state["login_handler"] = LoginHandler()
+login_handler = st.session_state["login_handler"]
 
-if SUPABASE_CLIENT not in st.session_state:
-    st.session_state[SUPABASE_CLIENT] = get_supabase_client()
-supabase = st.session_state[SUPABASE_CLIENT]
-# st.write(st.session_state)
-
-def set_authorized_user():
-    user = supabase.auth.get_user()
-    st.session_state[AUTHORIZED_USER] = user.user if user else None
-
-def get_authorized_user() -> str | None:
-    return st.session_state.get(AUTHORIZED_USER, None)
-
-def is_logged_in() -> bool:
-    return get_authorized_user() is not None
-
-def login(email: str, password: str):
-    member = get_active_member(email)
-    response = supabase.auth.sign_in_with_password({
-        "email": email,
-        "password": password
-    })
-    st.success("Logged in successfully.")
-    set_authorized_user()
-    st.rerun()
-
-def signup(email: str, password: str):
-    member = get_active_member(email)
-    app_url = os.getenv("APP_URL")
-    if not app_url:
-        st.error("APP_URL not set")
-        st.stop()
-    body = {
-        "email": email,
-        "password": password,
-        "options": {
-            "email_redirect_to": app_url + "/Supabase"
-        }
-    }
-    response = supabase.auth.sign_up(body)
-    if len(response.user.identities) > 0:
-        st.success("User created successfully. Please check your email for a verification link.")
-    else:
-        st.warning("User already exists. Please log in.")
 
 def handle_action(clicked: bool, func: Callable[[], None]):
     if clicked:
@@ -65,9 +22,9 @@ def handle_action(clicked: bool, func: Callable[[], None]):
 
 def init():
     # initial login state
-    set_authorized_user()
+    login_handler.set_authorized_user()
     # if not logged in, show login form
-    if not is_logged_in():
+    if not login_handler.is_logged_in():
         with st.sidebar.expander("You are not logged in. Please log in or register."):
             with st.form("login_form"):
                 email = st.text_input("Email", help="Your e-mail address listed in Webling")
@@ -78,13 +35,13 @@ def init():
                 with col2:
                     signup_button = st.form_submit_button("Register", type="secondary", help="Register a new user")
                 # TODO: Add a button to reset password
-                handle_action(login_button, lambda: login(email, password))
-                handle_action(signup_button, lambda: signup(email, password))
+                handle_action(login_button, lambda: login_handler.login(email, password))
+                handle_action(signup_button, lambda: login_handler.signup(email, password))
                 st.stop()
     # otherwise show the user info
     else:
         with st.sidebar.expander("You are logged in."):
-            user = get_authorized_user()
+            user = login_handler.get_authorized_user()
             if not user:
                 st.error("No User logged in.")
                 st.stop()
@@ -96,6 +53,7 @@ def init():
 
 # Main
 init()
+supabase = login_handler.supabase_client
 
 # load data
 data = supabase.table("kickwax").select("*").execute().data
