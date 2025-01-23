@@ -69,7 +69,6 @@ class SupaBaseConfig(BaseSettings):
 
 supabase_cfg = SupaBaseConfig()
 
-@st.cache_resource
 def get_supabase_client() -> Client:
     if not supabase_cfg.url or not supabase_cfg.key:
         st.error('SUPABASE_URL or SUPABASE_KEY not set')
@@ -80,6 +79,6 @@ def get_supabase_client() -> Client:
             "email": supabase_cfg.email,
             "password": supabase_cfg.password
         })
-    except Exception as e:
+    except Exception:
         pass
     return client

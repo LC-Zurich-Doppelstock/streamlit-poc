@@ -8,15 +8,23 @@ from pydantic import ValidationError
 import streamlit_react_jsonschema as srj
 
 
-supabase = get_supabase_client()
+SUPABASE_CLIENT = "supabase"
+AUTHORIZED_USER = "authorized_user"
 
-LOGIN_STATE = "logged_in"
+if SUPABASE_CLIENT not in st.session_state:
+    st.session_state[SUPABASE_CLIENT] = get_supabase_client()
+supabase = st.session_state[SUPABASE_CLIENT]
+# st.write(st.session_state)
 
-def set_login_state(state: bool):
-    st.session_state[LOGIN_STATE] = state
+def set_authorized_user():
+    user = supabase.auth.get_user()
+    st.session_state[AUTHORIZED_USER] = user.user if user else None
+
+def get_authorized_user() -> str | None:
+    return st.session_state.get(AUTHORIZED_USER, None)
 
 def is_logged_in() -> bool:
-    return st.session_state.get(LOGIN_STATE, False)    
+    return get_authorized_user() is not None
 
 def login(email: str, password: str):
     member = get_active_member(email)
@@ -25,7 +33,7 @@ def login(email: str, password: str):
         "password": password
     })
     st.success("Logged in successfully.")
-    set_login_state(True)
+    set_authorized_user()
     st.rerun()
 
 def signup(email: str, password: str):
@@ -57,7 +65,7 @@ def handle_action(clicked: bool, func: Callable[[], None]):
 
 def init():
     # initial login state
-    set_login_state(supabase.auth.get_user() is not None)
+    set_authorized_user()
     # if not logged in, show login form
     if not is_logged_in():
         with st.sidebar.expander("You are not logged in. Please log in or register."):
@@ -72,14 +80,15 @@ def init():
                 # TODO: Add a button to reset password
                 handle_action(login_button, lambda: login(email, password))
                 handle_action(signup_button, lambda: signup(email, password))
+                st.stop()
     # otherwise show the user info
     else:
         with st.sidebar.expander("You are logged in."):
-            user = supabase.auth.get_user()
+            user = get_authorized_user()
             if not user:
                 st.error("No User logged in.")
                 st.stop()
-            member = get_active_member(user.user.email)
+            member = get_active_member(user.email)
             if not member:
                 st.error("No active member found in Webling with email {user.user.email}.")
                 st.stop()
@@ -87,8 +96,6 @@ def init():
 
 # Main
 init()
-if not is_logged_in():
-    st.stop()
 
 # load data
 data = supabase.table("kickwax").select("*").execute().data
