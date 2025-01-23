@@ -1,14 +1,14 @@
+import os
 import pandas as pd
 import streamlit as st
-import os
+
+from typing import Any, Callable
+from gotrue.types import User, SignUpWithEmailAndPasswordCredentials
 from pydantic_settings import BaseSettings
 from requests import get, Response
-from typing import Any
+from supabase import create_client, Client, AuthApiError, AuthWeakPasswordError
 from urllib import parse
 from webling.members import Member, Status
-from supabase import create_client, Client, AuthApiError, AuthWeakPasswordError
-from gotrue.types import User, SignUpWithEmailAndPasswordCredentials
-from typing import Callable
 
 
 class WeblingConfig(BaseSettings):
