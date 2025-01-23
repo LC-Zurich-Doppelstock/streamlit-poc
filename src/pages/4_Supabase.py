@@ -91,8 +91,23 @@ if not is_logged_in():
     st.stop()
 
 # load data
-data = supabase.table("test").select("*").execute().data
-st.dataframe(data, use_container_width=True, hide_index=True)
+data = supabase.table("kickwax").select("*").execute().data
+
+# Select only relevant columns for display
+display_columns = ['date', 'name', 'location', 'success_rate']
+summary = [{k: v for k, v in entry.items() if k in display_columns} for entry in data]
+
+table = st.dataframe(summary, use_container_width=True, hide_index=True, column_order=display_columns, on_select="rerun", selection_mode="single-row")
+
+# view details
+if not table.selection.rows:
+    st.info("Select a row from the table above to view the layers.")
+else:
+    selected_index = table.selection.rows[0]
+    entry = KickWaxEntry(**data[selected_index])
+    st.subheader(f"Wax layers for {entry.name} on {entry.date}")
+    for layer in entry.layers:
+        st.write(str(layer))
 
 # add new entry
 with st.expander("Add new entry"):
@@ -100,7 +115,8 @@ with st.expander("Add new entry"):
     if submitted and value:
         try:
             obj = KickWaxEntry.model_validate(value)
-            supabase.table("test").insert({"name": obj.name}).execute()
+            st.write(obj.model_dump())
+            supabase.table("kickwax").insert(obj.model_dump()).execute()
             st.success("Added new entry.")
         except ValidationError as e:
             st.error(e)
