@@ -41,3 +41,4 @@ class KickWaxAdd(BaseModel):
 
 class KickWaxEntry(KickWaxAdd):
     id: int = Field(default=0, description="Unique identifier for the entry")
+    mine: bool = Field(default=False, description="Whether the entry is mine")

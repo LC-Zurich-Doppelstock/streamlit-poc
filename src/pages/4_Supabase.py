@@ -1,8 +1,10 @@
 import streamlit as st
+import streamlit_react_jsonschema as srj
+import pandas as pd
+
 from data import get_active_member, LoginHandler
 from models.kick_wax import KickWaxEntry, KickWaxAdd
 from pydantic import ValidationError
-import streamlit_react_jsonschema as srj
 
 
 if "login_handler" not in st.session_state:
@@ -45,18 +47,12 @@ init()
 supabase = login_handler.supabase_client
 
 # load data
-data = supabase.table("kickwax").select("*").execute().data
+data = pd.DataFrame(supabase.table("kickwax").select("*").execute().data)
+data["mine"] = data["created_by"] == login_handler.get_authorized_user().id
 
 # Select only relevant columns for display
-user_id = supabase.auth.get_user().user.id
-display_columns = ['date', 'name', 'location', 'success_rate']
-summary = [
-    {
-        **{k: v for k, v in entry.items() if k in display_columns},
-        **{'mine': entry.get('created_by') == user_id}
-    } for entry in data
-]
-display_columns.append('mine')
+display_columns = ["date", "name", "location", "success_rate", "mine"]
+summary = data[display_columns]
 # display table
 table = st.dataframe(
     summary,
@@ -71,21 +67,22 @@ if not table.selection.rows:
     st.info("Select a row from the table.")
 else:
     selected_index = table.selection.rows[0]
-    entry = KickWaxEntry(**data[selected_index])
+    entry = KickWaxEntry(**data.iloc[selected_index])
         
     # view
     st.subheader(f"Wax layers for {entry.name} on {entry.date}")
     for layer in entry.layers:
         st.write(str(layer))
     
-    # delete
-    with st.expander(f"Delete {entry}"):
-        if st.button("Yes, delete", key="confirm_delete", type="primary"):
-            supabase.table("kickwax").delete().eq("id", entry.id).execute()
-            st.success("Deleted entry.")
-            st.rerun()
-        if st.button("No, cancel", key="cancel_delete", type="secondary"):
-            st.rerun()
+    # only allow deletion of own entries
+    if entry.mine:
+        with st.expander(f"Delete {entry}"):
+            if st.button("Yes, delete", key="confirm_delete", type="primary"):
+                supabase.table("kickwax").delete().eq("id", entry.id).execute()
+                st.success("Deleted entry.")
+                st.rerun()
+            if st.button("No, cancel", key="cancel_delete", type="secondary"):
+                st.rerun()
 
 # add new entry
 with st.expander("Add new entry"):
