@@ -1,56 +1,35 @@
 import os
 import streamlit as st
-from data import get_call
-from supabase import AuthApiError, AuthWeakPasswordError, Client, create_client
+from data import get_active_member, get_supabase_client
+from supabase import AuthApiError, AuthWeakPasswordError
+from models.kick_wax import KickWaxEntry
 from typing import Callable
-from webling.members import Member, Status
+from pydantic import ValidationError
+import streamlit_react_jsonschema as srj
 
-# Initialize connection.
-# Uses st.cache_resource to only run once.
-@st.cache_resource
-def get_supabase_client() -> Client:
-    url = os.getenv('SUPABASE_URL')
-    key = os.getenv('SUPABASE_KEY')
-    if not url or not key:
-        st.error('SUPABASE_URL or SUPABASE_KEY not set')
-        st.stop()
-    return create_client(url, key)
 
 supabase = get_supabase_client()
 
 LOGIN_STATE = "logged_in"
 
-def get_data(_supabase: Client, table: str) -> list[dict]:
-    return _supabase.table(table).select("*").execute().data
-
 def set_login_state(state: bool):
     st.session_state[LOGIN_STATE] = state
-    st.rerun()
 
 def is_logged_in() -> bool:
-    return st.session_state.get(LOGIN_STATE, False)
-    
-
-def validate_active_member(email: str) -> Member:
-    data = get_call('member', {'format': 'full'}).json()
-    members = [Member(**member) for member in data]
-    member = next((member for member in members if member.email == email and member.status == Status.Aktiv), None)
-    if not member:
-        st.error(f"No active member found in Webling with email {email}.")
-        st.stop()
-    return member
+    return st.session_state.get(LOGIN_STATE, False)    
 
 def login(email: str, password: str):
-    validate_active_member(email)
+    member = get_active_member(email)
     response = supabase.auth.sign_in_with_password({
         "email": email,
         "password": password
     })
     st.success("Logged in successfully.")
     set_login_state(True)
+    st.rerun()
 
 def signup(email: str, password: str):
-    validate_active_member(email)
+    member = get_active_member(email)
     app_url = os.getenv("APP_URL")
     if not app_url:
         st.error("APP_URL not set")
@@ -77,41 +56,67 @@ def handle_action(clicked: bool, func: Callable[[], None]):
             st.stop()
 
 def init():
-    tab1, tab2 = st.tabs(["Log In", "Register"])
-    with tab1:
-        with st.form("login_form"):
-            email = st.text_input("Email", help="Your e-mail address listed in Webling")
-            password = st.text_input("Password", type="password")
-            submit = st.form_submit_button("Log In", type="primary")
-            handle_action(submit, lambda: login(email, password))
-    with tab2:
-        with st.form("signup_form"):
-            email = st.text_input("Email", help="Your e-mail address listed in Webling")
-            password = st.text_input("Password", type="password")
-            submit = st.form_submit_button("Register", type="primary")
-            handle_action(submit, lambda: signup(email, password))
+    # initial login state
+    set_login_state(supabase.auth.get_user() is not None)
+    # if not logged in, show login form
+    if not is_logged_in():
+        with st.sidebar.expander("You are not logged in. Please log in or register."):
+            with st.form("login_form"):
+                email = st.text_input("Email", help="Your e-mail address listed in Webling")
+                password = st.text_input("Password", type="password")
+                col1, col2 = st.columns(2)
+                with col1:
+                    login_button = st.form_submit_button("Log In", type="primary")
+                with col2:
+                    signup_button = st.form_submit_button("Register", type="secondary", help="Register a new user")
+                # TODO: Add a button to reset password
+                handle_action(login_button, lambda: login(email, password))
+                handle_action(signup_button, lambda: signup(email, password))
+    # otherwise show the user info
+    else:
+        with st.sidebar.expander("You are logged in."):
+            user = supabase.auth.get_user()
+            if not user:
+                st.error("No User logged in.")
+                st.stop()
+            member = get_active_member(user.user.email)
+            if not member:
+                st.error("No active member found in Webling with email {user.user.email}.")
+                st.stop()
+            st.markdown(f"Welcome *:blue[{member.first_name} {member.last_name}]*")
 
 # Main
+init()
 if not is_logged_in():
-    st.write("You are not logged in. Please log in or sign up.")
-    init()
-else:
-    user = supabase.auth.get_user()
-    if not user:
-        st.error("No User logged in.")
-        st.stop()
-    member = validate_active_member(user.user.email)
-    if not member:
-        st.error("No active member found in Webling with email {user.user.email}.")
-        st.stop()
-    st.markdown(f"Welcome *:blue[{member.first_name} {member.last_name}]*")
+    st.stop()
 
-    st.table(get_data(supabase, "test"))
-    
-    with st.form("test_form"):
-        name = st.text_input("Name")
-        submit = st.form_submit_button("Add")
-        if submit:
-            supabase.table("test").insert({"name": name}).execute()
+# load data
+data = supabase.table("kickwax").select("*").execute().data
+
+# Select only relevant columns for display
+display_columns = ['date', 'name', 'location', 'success_rate']
+summary = [{k: v for k, v in entry.items() if k in display_columns} for entry in data]
+
+table = st.dataframe(summary, use_container_width=True, hide_index=True, column_order=display_columns, on_select="rerun", selection_mode="single-row")
+
+# view details
+if not table.selection.rows:
+    st.info("Select a row from the table above to view the layers.")
+else:
+    selected_index = table.selection.rows[0]
+    entry = KickWaxEntry(**data[selected_index])
+    st.subheader(f"Wax layers for {entry.name} on {entry.date}")
+    for layer in entry.layers:
+        st.write(str(layer))
+
+# add new entry
+with st.expander("Add new entry"):
+    value, submitted = srj.pydantic_form(model=KickWaxEntry)    
+    if submitted and value:
+        try:
+            obj = KickWaxEntry.model_validate(value)
+            st.write(obj.model_dump())
+            supabase.table("kickwax").insert(obj.model_dump()).execute()
             st.success("Added new entry.")
-            st.rerun()
+        except ValidationError as e:
+            st.error(e)
