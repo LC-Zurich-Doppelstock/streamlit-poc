@@ -1,12 +1,13 @@
 import os
 import pandas as pd
 import streamlit as st
-
+import asyncio
 from typing import Any, Callable
 from gotrue.types import User, SignUpWithEmailAndPasswordCredentials
 from pydantic_settings import BaseSettings
 from requests import get, Response
 from supabase import create_client, Client, AuthApiError, AuthWeakPasswordError, create_async_client
+from realtime import AsyncRealtimeChannel
 from urllib import parse
 from webling.members import Member, Status
 
@@ -75,6 +76,7 @@ supabase_cfg = SupaBaseConfig()
 class LoginHandler:
     supabase_client: Client
     authorized_user: User | None
+    channel: AsyncRealtimeChannel | None = None
 
     def __init__(self):
         if not supabase_cfg.url or not supabase_cfg.key:
@@ -89,14 +91,16 @@ class LoginHandler:
         except Exception:
             pass
 
-    async def subscribe_to_realtime(self, table: str, callback: Callable[[Any], None]):
-        async_client = await create_async_client(supabase_cfg.url, supabase_cfg.key)
-        await async_client.realtime.connect()
-        await (async_client
-            .channel(f"streamlit-realtime-{hash(self)}")
-            .on_postgres_changes(event="*", schema="public", table=table, callback=callback)
-            .subscribe()
-        )
+    def subscribe_to_realtime(self, table: str, callback: Callable[[Any], None]):
+        async def subscribe():
+            async_client = await create_async_client(supabase_cfg.url, supabase_cfg.key)
+            await async_client.realtime.connect()
+            self.channel = await (async_client
+                .channel(f"streamlit-realtime-{hash(self)}")
+                .on_postgres_changes(event="*", schema="public", table=table, callback=callback)
+                .subscribe()
+            )
+        asyncio.run(subscribe())
 
     def set_authorized_user(self):
         user_response = self.supabase_client.auth.get_user()

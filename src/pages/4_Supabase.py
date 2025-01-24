@@ -7,15 +7,14 @@ from data import get_active_member, LoginHandler
 from models.kick_wax import KickWaxEntry, KickWaxAdd
 from pydantic import ValidationError
 
-async def setup():
-    if "login_handler" not in st.session_state:
-        st.session_state["login_handler"] = LoginHandler()
-        await st.session_state["login_handler"].subscribe_to_realtime(
-            "kickwax",
-            lambda payload: st.write(payload)
-        )
 
-asyncio.run(setup())
+if "login_handler" not in st.session_state:
+    st.session_state["login_handler"] = LoginHandler()
+    st.session_state["login_handler"].subscribe_to_realtime(
+        "kickwax",
+        lambda payload: st.write(payload)
+    )
+
 login_handler = st.session_state["login_handler"]
 
 def init():
