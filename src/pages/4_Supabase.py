@@ -1,14 +1,21 @@
 import streamlit as st
 import streamlit_react_jsonschema as srj
 import pandas as pd
+import asyncio
 
 from data import get_active_member, LoginHandler
 from models.kick_wax import KickWaxEntry, KickWaxAdd
 from pydantic import ValidationError
 
+async def setup():
+    if "login_handler" not in st.session_state:
+        st.session_state["login_handler"] = LoginHandler()
+        await st.session_state["login_handler"].subscribe_to_realtime(
+            "kickwax",
+            lambda payload: st.write(payload)
+        )
 
-if "login_handler" not in st.session_state:
-    st.session_state["login_handler"] = LoginHandler()
+asyncio.run(setup())
 login_handler = st.session_state["login_handler"]
 
 def init():

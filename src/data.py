@@ -6,7 +6,7 @@ from typing import Any, Callable
 from gotrue.types import User, SignUpWithEmailAndPasswordCredentials
 from pydantic_settings import BaseSettings
 from requests import get, Response
-from supabase import create_client, Client, AuthApiError, AuthWeakPasswordError
+from supabase import create_client, Client, AuthApiError, AuthWeakPasswordError, create_async_client
 from urllib import parse
 from webling.members import Member, Status
 
@@ -88,6 +88,15 @@ class LoginHandler:
             })
         except Exception:
             pass
+
+    async def subscribe_to_realtime(self, table: str, callback: Callable[[Any], None]):
+        async_client = await create_async_client(supabase_cfg.url, supabase_cfg.key)
+        await async_client.realtime.connect()
+        await (async_client
+            .channel(f"streamlit-realtime-{hash(self)}")
+            .on_postgres_changes(event="*", schema="public", table=table, callback=callback)
+            .subscribe()
+        )
 
     def set_authorized_user(self):
         user_response = self.supabase_client.auth.get_user()
