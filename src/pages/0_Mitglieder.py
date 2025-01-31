@@ -78,7 +78,12 @@ fig.update_layout(
     yaxis_title='Ruhepuls',
     xaxis_title='Jahr'
 )
+# Add median line to heart rate plot
+median_data = heart_rates.groupby('year')['heart_rate'].median().reset_index()
+fig.add_scatter(x=median_data['year'], y=median_data['heart_rate'], 
+               mode='lines', name='Median', line=dict(color='red'))
 st.plotly_chart(fig, use_container_width=True)
+
 
 # dump year stats
 year_stats = []
