@@ -1,19 +1,20 @@
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-from streamlit.logger import get_logger
-from webling.members import Member
-from data import get_call
 from datetime import date, datetime
+import json
+import pandas as pd
+import pathlib
+import plotly.express as px
+import streamlit as st
+from streamlit.logger import get_logger
+
+from data import get_call
+from models.year_stats import YearStats
 from utils import page_config
+from webling.members import Member
 
 
 LOGGER = get_logger(__name__)
 
 def get_members() -> list[Member]:
-    # data = get_call('membergroup', {'format': 'full'}).json()
-    # groups = [MemberGroup(**group) for group in data]
-    # LOGGER.info('Loaded %d groups from Webling' % len(groups))
     data = get_call('member', {'format': 'full'}).json()
     members = [Member(**member) for member in data]
     LOGGER.info('Loaded %d members from Webling' % len(members))
@@ -61,6 +62,42 @@ a_count = [len([member for member in members if member.left(year)]) for year in 
 
 cat_bar_plot('Anzahl Neuzugänge und -abgänge pro Jahr', 'Jahr', years, 'Anzahl', 'Ereignis',
          ['Eintritte', 'Austritte'], [n_count, a_count], ['lightgreen', 'orange'])
+
+# Create pivot table data
+heart_rate_data = []
+for year in years:
+    rates = [member.heart_rate for member in members if member.is_active(year) and member.heart_rate != 0]
+    for rate in rates:
+        heart_rate_data.append({'year': year, 'heart_rate': rate})
+heart_rates = pd.DataFrame(heart_rate_data)
+
+# PLOT HEART RATE DISTRIBUTION PER YEAR
+fig = px.box(heart_rates, y='heart_rate', x='year')
+fig.update_layout(
+    title='Verteilung der Ruhepulse pro Jahr',
+    yaxis_title='Ruhepuls',
+    xaxis_title='Jahr'
+)
+st.plotly_chart(fig, use_container_width=True)
+
+# dump year stats
+year_stats = []
+for year, m_count, t_count, n_count, a_count in zip(years, m_count, t_count, n_count, a_count):
+    rates = heart_rates[heart_rates['year'] == year]['heart_rate']
+    rates = [int(rate) for rate in rates]
+    year_stats.append(
+        YearStats(
+            year=year,
+            active_members=m_count,
+            talent_members=t_count,
+            new_members=n_count,
+            left_members=a_count,
+            heart_rates=rates))
+# Write year stats to JSON file
+history_file = pathlib.Path(__file__).resolve().parent.parent / 'resources' / 'year_stats.json'
+with open(history_file, 'w') as f:
+    json_data = [stat.model_dump() for stat in year_stats]
+    json.dump(json_data, f, indent=2)
 
 
 if st.button("re-load data"):
